@@ -12,19 +12,19 @@ router = APIRouter()
 
 @router.post("/insurance", tags=["insurance"])
 async def post_insurance(
-        data: InsuranceRequest,
-        db: AsyncSession = Depends(database)
+    data: InsuranceRequest,
+    db: AsyncSession = Depends(database),
 ) -> InsuranceResponse:
     """Retrieves insurance price for the given cargo type and price."""
     stmt = select(Tariff).where(
-        Tariff.date.is_(data.date),
-        Tariff.cargo_type.is_(data.cargo_type),
+        Tariff.date == data.date,
+        Tariff.cargo_type == data.cargo_type,
     )
     try:
         tariff: Tariff | None = (await db.execute(stmt)).scalar()
     except Exception as error:
         raise HTTPException(status_code=500, detail=str(error))
     if tariff is None:
-        raise HTTPException(status_code=404, detail="Tariff not found")
+        raise HTTPException(status_code=404, detail=f"No tariff for date {data.date}")
 
     return InsuranceResponse(price=data.declared_value * tariff.rate)
