@@ -16,10 +16,7 @@ DATABASE_URL: str = (
     f"/{os.getenv("POSTGRES_DB")}"
 )
 
-Engine: AsyncEngine = create_async_engine(
-    DATABASE_URL,
-    echo=True,
-)
+Engine: AsyncEngine = create_async_engine(DATABASE_URL)
 
 
 async def database() -> AsyncGenerator[AsyncSession, None]:
