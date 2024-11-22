@@ -1,3 +1,5 @@
+import logging
+
 from fastapi import APIRouter, HTTPException
 from fastapi.params import Depends
 from sqlalchemy import select
@@ -8,6 +10,7 @@ from middlewares.database import database
 from models.tariffs import Tariff
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/insurance", tags=["insurance"])
@@ -22,9 +25,10 @@ async def post_insurance(
     )
     try:
         tariff: Tariff | None = (await db.execute(stmt)).scalar()
-    except Exception as error:
-        raise HTTPException(status_code=500, detail=str(error))
+    except Exception as e:
+        logger.error("Unknown database error", exc_info=e)
+        raise HTTPException(500)
     if tariff is None:
-        raise HTTPException(status_code=404, detail=f"No tariff for date {data.date}")
+        raise HTTPException(404, detail=f"No tariff for date {data.date}")
 
     return InsuranceResponse(price=data.declared_value * tariff.rate)

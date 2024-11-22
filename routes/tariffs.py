@@ -1,4 +1,5 @@
 import datetime
+import logging
 from collections.abc import Sequence
 
 from fastapi import APIRouter, HTTPException
@@ -13,6 +14,7 @@ from middlewares.database import database
 from models import Tariff
 
 router = APIRouter()
+logger = logging.getLogger(__name__)
 
 
 @router.post("/tariffs", tags=["tariffs"])
@@ -20,6 +22,7 @@ async def create_tariff(
     data: CreateTariffRequest,
     db: AsyncSession = Depends(database),
 ) -> TariffResponse:
+    """Create a new tariff."""
     # models can be initialized with keyword arguments but pycharm complains
     # noinspection PyArgumentList
     new_tariff = Tariff(
@@ -32,7 +35,7 @@ async def create_tariff(
     try:
         await db.commit()
     except IntegrityError:
-        raise HTTPException(status_code=400, detail="Tariff with such date and type already exists")
+        raise HTTPException(400, detail="Tariff with such date and type already exists")
 
     await db.refresh(new_tariff)
 
@@ -49,6 +52,7 @@ async def create_tariffs_batch(
     data: RootModel[dict[datetime.date, list[CargoRate]]],
     db: AsyncSession = Depends(database),
 ) -> None:
+    """Create a new tariffs with batch data request."""
     for date, tariffs in data.root.items():
         for tariff in tariffs:
             # noinspection PyArgumentList
@@ -62,7 +66,7 @@ async def create_tariffs_batch(
     try:
         await db.commit()
     except IntegrityError:
-        raise HTTPException(status_code=400, detail="All tariffs must not be present already")
+        raise HTTPException(400, detail="Some tariffs must not be already present")
 
 
 @router.get("/tariffs", tags=["tariffs"])
@@ -71,11 +75,13 @@ async def get_tariffs(
     limit: int = Query(50),
     offset: int = Query(0),
 ) -> list[TariffResponse]:
+    """Retrieve all available tariffs."""
     stmt = select(Tariff).limit(limit).offset(offset)
     try:
         results: Sequence[Tariff] = (await db.execute(stmt)).scalars().all()
-    except Exception as error:
-        raise HTTPException(500, detail=str(error))
+    except Exception as e:
+        logger.error("Unknown database error", exc_info=e)
+        raise HTTPException(500)
 
     return [
         TariffResponse(
@@ -93,11 +99,13 @@ async def get_tariff(
     id: int,
     db: AsyncSession = Depends(database),
 ) -> TariffResponse:
+    """Retrieve a specific tariff."""
     stmt = select(Tariff).where(Tariff.id == id)
     try:
         tariff: Tariff | None = (await db.execute(stmt)).scalar()
-    except Exception as error:
-        raise HTTPException(500, detail=str(error))
+    except Exception as e:
+        logger.error("Unknown database error", exc_info=e)
+        raise HTTPException(500)
 
     if tariff is None:
         raise HTTPException(404, detail=f"Tariff with id {id} not found")
@@ -116,14 +124,16 @@ async def update_tariff(
     data: UpdateTariffRequest,
     db: AsyncSession = Depends(database),
 ) -> TariffResponse:
+    """Update a specific tariff."""
     if data.cargo_type is None and data.rate is None:
         raise HTTPException(400, detail="At least one of 'cargo_type' and 'rate' are required")
 
     stmt = select(Tariff).where(Tariff.id == id)
     try:
         tariff: Tariff | None = (await db.execute(stmt)).scalar()
-    except Exception as error:
-        raise HTTPException(500, detail=str(error))
+    except Exception as e:
+        logger.error("Unknown database error", exc_info=e)
+        raise HTTPException(500)
 
     if tariff is None:
         raise HTTPException(404, detail=f"Tariff with id {id} not found")
@@ -148,11 +158,13 @@ async def delete_tariff(
     id: int,
     db: AsyncSession = Depends(database),
 ) -> TariffResponse:
+    """Delete a specific tariff."""
     stmt = select(Tariff).where(Tariff.id == id)
     try:
         tariff: Tariff | None = (await db.execute(stmt)).scalar()
-    except Exception as error:
-        raise HTTPException(500, detail=str(error))
+    except Exception as e:
+        logger.error("Unknown database error", exc_info=e)
+        raise HTTPException(500)
 
     if tariff is None:
         raise HTTPException(404, detail=f"Tariff with id {id} not found")
