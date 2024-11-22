@@ -1,3 +1,4 @@
+import os
 from collections.abc import AsyncGenerator
 
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, AsyncEngine
@@ -8,8 +9,12 @@ __all__ = (
     "database",
 )
 
-# DATABASE_URL = "postgresql+asyncpg://user:password@localhost:5432/insurance"
-DATABASE_URL = "sqlite+aiosqlite:///database.db"
+DATABASE_URL: str = (
+    "postgresql+asyncpg://"
+    f"{os.getenv("POSTGRES_USER")}:{os.getenv("POSTGRES_PASSWORD")}"
+    f"@{os.getenv("POSTGRES_ADDRESS", "localhost")}:{os.getenv("POSTGRES_PORT", "5432")}"
+    f"/{os.getenv("POSTGRES_DB")}"
+)
 
 Engine: AsyncEngine = create_async_engine(
     DATABASE_URL,

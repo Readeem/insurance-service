@@ -56,7 +56,7 @@ async def create_tariffs_batch(
                 Tariff(
                     cargo_type=tariff.cargo_type,
                     rate=tariff.rate,
-                    data=date,
+                    date=date,
                 )
             )
     try:
