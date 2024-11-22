@@ -1,3 +1,5 @@
+import os
+
 import uvicorn
 from fastapi import FastAPI
 
@@ -13,4 +15,5 @@ app.include_router(insurance_router)
 app.include_router(tariffs_router)
 
 if __name__ == "__main__":
+    os.system("alembic upgrade head")
     uvicorn.run(app, host="0.0.0.0", port=8000)
